@@ -1,7 +1,6 @@
 package models
 
 import (
-	"bufio"
 	"fmt"
 	"io"
 	"io/fs"
@@ -13,13 +12,8 @@ import (
 	tea "github.com/charmbracelet/bubbletea/v2"
 	"github.com/charmbracelet/lipgloss/v2"
 	"github.com/charmbracelet/log"
-)
 
-var (
-	// titleStyle    = lipgloss.NewStyle().Foreground(lipgloss.Color("#DDDDDD")).Bold(true).Underline(true)
-	fileNameStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#DD8800")).Italic(true)
-	viewportStyle = lipgloss.NewStyle().Align(lipgloss.Center, lipgloss.Top).Border(lipgloss.RoundedBorder())
-	footerStyle   = lipgloss.NewStyle().AlignHorizontal(lipgloss.Center).Italic(true)
+	"github.com/dustin/go-humanize"
 )
 
 func NewModel(filename string) *model {
@@ -34,9 +28,9 @@ func NewModel(filename string) *model {
 }
 
 func (m model) CloseModel() {
-	if m.file != nil {
-		m.file.Close()
-	}
+	// if m.file != nil {
+	// 	m.file.Close()
+	// }
 }
 
 type model struct {
@@ -46,14 +40,11 @@ type model struct {
 	width, height int
 	ready         bool
 
-	file   *os.File
-	reader *bufio.Reader
-
+	fileExists   bool
 	prevFileInfo fs.FileInfo
 }
 
 func (m model) Init() tea.Cmd {
-	// TODO: Try and load file here so there isn't a "trying to find file" visible every time
 	return tickCmd()
 }
 
@@ -80,7 +71,9 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		if !m.ready {
 			m.viewport = viewport.New(viewport.WithWidth(msg.Width), viewport.WithHeight(m.height-verticalMarginHeight-viewportStyle.GetVerticalBorderSize()))
-			m.viewport.SetContent("Waiting for file to be found...")
+			m.fileExists = false
+			m.viewport.SoftWrap = true
+			m.viewport.LeftGutterFunc = GutterFunc
 			m.ready = true
 		} else {
 			m.viewport.SetWidth(msg.Width)
@@ -88,20 +81,24 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 	case fileExistsMsg:
+		m.viewport.LeftGutterFunc = GutterFunc
+		m.prevFileInfo = msg.info
+		m.fileExists = true
 		m.viewport.SetContent(string(msg.content))
 		m.viewport.GotoTop()
 
 	case fileGoneMsg:
-		content := "❌ File not found: " + m.filename
-		content += "\n\n" + "Waiting for file to be created..."
-		m.viewport.SetContent(content)
+		m.viewport.LeftGutterFunc = nil
+		m.fileExists = false
+		// content := "❌ File not found: " + m.filename
+		// content += "\n\n" + "Waiting for file to be created..."
+		m.viewport.SetContent("")
 
 	case fileErrorMsg:
 		content := "❌ Error reading file: " + msg.Error()
 		m.viewport.SetContent(content)
 
 	case tickMsg:
-		// log.Info("Tick msg")
 		cmds = append(cmds, checkFile(m.filename))
 		cmds = append(cmds, tickCmd())
 	}
@@ -125,7 +122,12 @@ func (m model) View() string {
 }
 
 func (m model) header() string {
-	outStr := "Current File: " + fileNameStyle.Render(m.filename)
+	outStr := fmt.Sprintf("Current File: %v\n", fileNameStyle.Render(m.filename))
+	if m.fileExists {
+		outStr += fmt.Sprintf("File Size: %v ~~ Last Modified: %v", humanize.Bytes(uint64(m.prevFileInfo.Size())), m.prevFileInfo.ModTime().Format("03:04:05.0000 PM"))
+	} else {
+		outStr += "File being monitored doesn't seem to exist..."
+	}
 	return lipgloss.PlaceHorizontal(m.width, lipgloss.Center, outStr)
 }
 func (m model) footer() string {
