@@ -4,12 +4,15 @@ import (
 	"bufio"
 	"fmt"
 	"io"
+	"io/fs"
+
 	"os"
 	"time"
 
 	"github.com/charmbracelet/bubbles/v2/viewport"
 	tea "github.com/charmbracelet/bubbletea/v2"
 	"github.com/charmbracelet/lipgloss/v2"
+	"github.com/charmbracelet/log"
 )
 
 var (
@@ -24,6 +27,8 @@ func NewModel(filename string) *model {
 	m := model{
 		filename: filename,
 	}
+
+	log.Info("NewModel function")
 
 	return &m
 }
@@ -44,12 +49,13 @@ type model struct {
 	file   *os.File
 	reader *bufio.Reader
 
-	// Things for if no file exists
-	fileExists bool
-	// fileSpinner spinner.Model
+	prevFileInfo fs.FileInfo
 }
 
-func (m model) Init() tea.Cmd { return waitForFileCmd(m.filename) }
+func (m model) Init() tea.Cmd {
+	// TODO: Try and load file here so there isn't a "trying to find file" visible every time
+	return tickCmd()
+}
 
 func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
@@ -81,18 +87,23 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.viewport.SetHeight(msg.Height - verticalMarginHeight)
 		}
 
-	case fileReadyMsg:
-		m.file = msg
-		m.reader = bufio.NewReader(m.file)
-		m.fileExists = true
-		m.viewport.SetContent("")
-		cmds = append(cmds, tailFileCmd(m.reader, m.file))
+	case fileExistsMsg:
+		m.viewport.SetContent(string(msg.content))
+		m.viewport.GotoTop()
 
-	case newLineMsg:
-		m.viewport.SetContent(m.viewport.GetContent() + string(msg))
-		m.viewport.GotoBottom()
-		cmds = append(cmds, tailFileCmd(m.reader, m.file))
+	case fileGoneMsg:
+		content := "❌ File not found: " + m.filename
+		content += "\n\n" + "Waiting for file to be created..."
+		m.viewport.SetContent(content)
 
+	case fileErrorMsg:
+		content := "❌ Error reading file: " + msg.Error()
+		m.viewport.SetContent(content)
+
+	case tickMsg:
+		// log.Info("Tick msg")
+		cmds = append(cmds, checkFile(m.filename))
+		cmds = append(cmds, tickCmd())
 	}
 
 	// Handle keyboard and mouse events in the viewport
@@ -108,11 +119,7 @@ func (m model) View() string {
 	}
 	var centerContent string
 
-	if m.fileExists {
-		centerContent = m.viewport.View()
-	} else {
-		centerContent = "Waiting for file to exist..."
-	}
+	centerContent = m.viewport.View()
 
 	return fmt.Sprintf("%s\n%s\n%s", m.header(), viewportStyle.Render(centerContent), m.footer())
 }
@@ -133,46 +140,49 @@ type fileReadyMsg *os.File
 type errorMsg error
 type newLineMsg string
 
+type fileGoneMsg struct{}
+type fileExistsMsg struct {
+	info    fs.FileInfo
+	content []byte
+}
+type fileErrorMsg error
+
 // region: Commands
 
-// waitForFileCmd waits for a file to exist and then sends a fileReadyMsg.
-func waitForFileCmd(path string) tea.Cmd {
-	return func() tea.Msg {
-		for {
-			f, err := os.Open(path)
-			if err == nil {
-				return fileReadyMsg(f)
-			}
-			if !os.IsNotExist(err) {
-				return errorMsg(err)
-			}
-			time.Sleep(1 * time.Second)
-		}
-	}
-}
-
-// tailFileCmd reads one line from the file and sends a newLineMsg.
-// It's designed to be called repeatedly in a command loop.
-func tailFileCmd(reader *bufio.Reader, file *os.File) tea.Cmd {
-	return func() tea.Msg {
-		line, err := reader.ReadString('\n')
-
-		if err != nil {
-			// If we're at the end, just wait a bit and try again.
-			if err == io.EOF {
-				time.Sleep(250 * time.Millisecond)
-				reader.Reset(file)
-				return tailFileCmd(reader, file)() // Recurse to continue tailing
-			}
-			return errorMsg(err)
-		}
-
-		return newLineMsg(line)
-	}
-}
-
-func tickCmd() tea.Msg {
+func tickCmd() tea.Cmd {
 	return tea.Tick(tickRate, func(t time.Time) tea.Msg {
 		return tickMsg(t)
 	})
+}
+
+func checkFile(name string) tea.Cmd {
+	return func() tea.Msg {
+		info, err := os.Stat(name)
+
+		// File doesn't exist
+		if os.IsNotExist(err) {
+			return fileGoneMsg{}
+		}
+
+		// File exists but error trying to access it
+		if err != nil {
+			return fileErrorMsg(err)
+		}
+
+		// Otherwise, open file
+		file, err := os.Open(name)
+		if err != nil {
+			return fileErrorMsg(err)
+		}
+
+		// Can close the file at the end of this since we've already extracted content
+		defer file.Close()
+
+		content, err := io.ReadAll(file)
+		if err != nil {
+			return fileErrorMsg(err)
+		}
+
+		return fileExistsMsg{content: content, info: info}
+	}
 }
