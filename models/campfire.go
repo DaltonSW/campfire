@@ -8,6 +8,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/charmbracelet/bubbles/v2/help"
 	"github.com/charmbracelet/bubbles/v2/viewport"
 	tea "github.com/charmbracelet/bubbletea/v2"
 	"github.com/charmbracelet/lipgloss/v2"
@@ -16,10 +17,24 @@ import (
 	"github.com/dustin/go-humanize"
 )
 
+const tickRate = time.Millisecond * 500
+
+// Messages
+
+type tickMsg time.Time
+type fileGoneMsg struct{}
+type fileExistsMsg struct {
+	info    fs.FileInfo
+	content []byte
+}
+type fileErrorMsg error
+
+// NewModel actually creates the main campfire model
 func NewModel(filename string) *model {
 	// Viewport is initialized in after window size message
 	m := model{
 		filename: filename,
+		help:     help.New(),
 	}
 
 	log.Info("NewModel function")
@@ -27,27 +42,25 @@ func NewModel(filename string) *model {
 	return &m
 }
 
-func (m model) CloseModel() {
-	// if m.file != nil {
-	// 	m.file.Close()
-	// }
-}
-
+// model is the BubbleTea model for campfire
 type model struct {
 	filename      string
 	content       string
 	viewport      viewport.Model
 	width, height int
 	ready         bool
+	help          help.Model
 
 	fileExists   bool
 	prevFileInfo fs.FileInfo
 }
 
+// Init kicks off the ticking
 func (m model) Init() tea.Cmd {
 	return tickCmd()
 }
 
+// Update processes new messages for the model
 func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 	var cmds []tea.Cmd
@@ -59,21 +72,28 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 	case tea.WindowSizeMsg:
-		headerHeight := lipgloss.Height(m.header())
-		footerHeight := lipgloss.Height(m.footer())
+		headerHeight := lipgloss.Height(m.Header())
+		footerHeight := lipgloss.Height(m.Footer())
 		verticalMarginHeight := headerHeight + footerHeight
 
 		m.width = msg.Width
 		m.height = msg.Height
 
+		m.help.Width = msg.Width
+
 		viewportStyle = viewportStyle.Width(msg.Width).Height(m.height - verticalMarginHeight)
 		footerStyle.Width(m.width)
 
 		if !m.ready {
-			m.viewport = viewport.New(viewport.WithWidth(msg.Width), viewport.WithHeight(m.height-verticalMarginHeight-viewportStyle.GetVerticalBorderSize()))
-			m.fileExists = false
+			m.viewport = viewport.New(
+				viewport.WithWidth(msg.Width-viewportStyle.GetHorizontalBorderSize()),
+				viewport.WithHeight(m.height-verticalMarginHeight-viewportStyle.GetVerticalBorderSize()),
+			)
+
 			m.viewport.SoftWrap = true
 			m.viewport.LeftGutterFunc = GutterFunc
+
+			m.fileExists = false
 			m.ready = true
 		} else {
 			m.viewport.SetWidth(msg.Width)
@@ -90,8 +110,6 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case fileGoneMsg:
 		m.viewport.LeftGutterFunc = nil
 		m.fileExists = false
-		// content := "❌ File not found: " + m.filename
-		// content += "\n\n" + "Waiting for file to be created..."
 		m.viewport.SetContent("")
 
 	case fileErrorMsg:
@@ -110,6 +128,7 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, tea.Batch(cmds...)
 }
 
+// View displays the state of the model
 func (m model) View() string {
 	if !m.ready {
 		return "\n  Initializing..."
@@ -118,10 +137,11 @@ func (m model) View() string {
 
 	centerContent = m.viewport.View()
 
-	return fmt.Sprintf("%s\n%s\n%s", m.header(), viewportStyle.Render(centerContent), m.footer())
+	return fmt.Sprintf("%s\n%s\n%s", m.Header(), viewportStyle.Render(centerContent), m.Footer())
 }
 
-func (m model) header() string {
+// Header gets the above-viewport content. Title and file stats
+func (m model) Header() string {
 	outStr := fmt.Sprintf("Current File: %v\n", fileNameStyle.Render(m.filename))
 	if m.fileExists {
 		outStr += fmt.Sprintf("File Size: %v ~~ Last Modified: %v", humanize.Bytes(uint64(m.prevFileInfo.Size())), m.prevFileInfo.ModTime().Format("03:04:05.0000 PM"))
@@ -129,34 +149,26 @@ func (m model) header() string {
 		outStr += "File being monitored doesn't seem to exist..."
 	}
 	return lipgloss.PlaceHorizontal(m.width, lipgloss.Center, outStr)
+
 }
-func (m model) footer() string {
-	outStr := footerStyle.Render("Eventual helptext location and whatever")
+
+// Footer prints the helptext and contact/repo info
+func (m model) Footer() string {
+	// TODO: Help
+
+	// outStr := footerStyle.Render(m.help.View(viewport.DefaultKeyMap()) + "\n")
+	outStr := footerStyle.Render("Issues? Suggestions? Discussions? Lemme know -- https://github.com/daltonsw/campfire")
 	return lipgloss.PlaceHorizontal(m.width, lipgloss.Center, outStr)
 }
 
-const tickRate = time.Millisecond * 500
-
-type tickMsg time.Time
-type fileReadyMsg *os.File
-type errorMsg error
-type newLineMsg string
-
-type fileGoneMsg struct{}
-type fileExistsMsg struct {
-	info    fs.FileInfo
-	content []byte
-}
-type fileErrorMsg error
-
-// region: Commands
-
+// Commands
 func tickCmd() tea.Cmd {
 	return tea.Tick(tickRate, func(t time.Time) tea.Msg {
 		return tickMsg(t)
 	})
 }
 
+// checkFile checks the current state of the file, returning a corresponding message
 func checkFile(name string) tea.Cmd {
 	return func() tea.Msg {
 		info, err := os.Stat(name)
@@ -177,9 +189,10 @@ func checkFile(name string) tea.Cmd {
 			return fileErrorMsg(err)
 		}
 
-		// Can close the file at the end of this since we've already extracted content
+		// Can close the file at the end of this since we'll extract all the content prior
 		defer file.Close()
 
+		// Grab all the content, return it in a message
 		content, err := io.ReadAll(file)
 		if err != nil {
 			return fileErrorMsg(err)
