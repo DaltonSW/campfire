@@ -13,6 +13,10 @@ Hide
   # Disable tmux status line
   Type "tmux set status" Enter
 
+  # Set border colors to black
+  Type 'tmux setw pane-border-style "fg=white" && \' Enter
+  Type 'tmux setw pane-active-border-style "fg=white"' Enter
+
   # Clear any existing files
   Type "rm vhs.log" Enter
 
@@ -23,12 +27,16 @@ Hide
 Show
 
 # Create a horizontal split
-Type "tmux split-window -h -p 60 -- bash" Enter
+Type "tmux split-window -h -d -p 70 -- bash" Enter
+Sleep 1
+
+Ctrl+L
 Sleep 0.5
 
-# Set border colors to black
-# Type 'tmux setw pane-border-style "fg=0" && \' Enter
-# Type 'tmux setw pane-active-border-style "fg=0"' Enter
+Ctrl+B
+Type o
+Sleep 0.5
+
 
 Type "campfire vhs.log" Enter
 Sleep 1
@@ -36,8 +44,6 @@ Sleep 1
 # Swap back to main pane
 Ctrl+B
 Type o
-Sleep 0.5
-Ctrl+L
 Sleep 0.5
 
 Type "go run demo/demo.go vhs.log" Enter

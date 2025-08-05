@@ -107,7 +107,7 @@ func generateLogCmd() tea.Cmd {
 
 		// Fill in template with random values
 		var message string
-		switch rand.Intn(3) {
+		switch rand.Intn(2) {
 		case 0:
 			message = fmt.Sprintf(template, randomValues[rand.Intn(len(randomValues))])
 		case 1:
@@ -143,16 +143,9 @@ var (
 			Padding(0, 1).
 			Bold(true)
 
-	levelStyles = map[string]lipgloss.Style{
-		"INFO":  lipgloss.NewStyle().Foreground(lipgloss.Color("#00FF00")),
-		"WARN":  lipgloss.NewStyle().Foreground(lipgloss.Color("#FFFF00")),
-		"ERROR": lipgloss.NewStyle().Foreground(lipgloss.Color("#FF0000")),
-		"DEBUG": lipgloss.NewStyle().Foreground(lipgloss.Color("#00FFFF")),
-	}
-
-	statStyle = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#888888")).
-			Italic(true)
+	appStyle = lipgloss.NewStyle().
+			Border(lipgloss.RoundedBorder()).
+			Padding(1)
 )
 
 func initialModel(file *os.File) model {
@@ -201,24 +194,9 @@ func (m model) View() string {
 	header := headerStyle.Render(" Log Generator ")
 
 	content := fmt.Sprintf("📁 Output File: %s\n", m.filename)
-	content += fmt.Sprintf("📊 Logs Generated: %d\n\n", m.logCount)
+	content += fmt.Sprintf("📊 Logs Generated: %d", m.logCount)
 
-	if m.lastLevel != "" {
-		levelStyle := levelStyles[m.lastLevel]
-		content += "Last Entry:\n"
-		content += fmt.Sprintf("  Level: %s\n", levelStyle.Render(m.lastLevel))
-		content += fmt.Sprintf("  Message: %s\n\n", m.lastMessage)
-	}
-
-	controls := statStyle.Render("Controls: q/ctrl+c (quit) | r (reset log file)")
-
-	// Center everything
-	if m.width > 0 {
-		header = lipgloss.PlaceHorizontal(m.width, lipgloss.Center, header)
-		controls = lipgloss.PlaceHorizontal(m.width, lipgloss.Center, controls)
-	}
-
-	return fmt.Sprintf("%s\n\n%s\n%s", header, content, controls)
+	return lipgloss.PlaceHorizontal(m.width, lipgloss.Center, fmt.Sprintf("%s\n\n%s", header, appStyle.Render(content)))
 }
 
 func main() {
@@ -233,12 +211,13 @@ func main() {
 	}
 
 	log.SetLevel(log.DebugLevel)
+	log.SetTimeFormat("03:04:05PM")
 	log.SetOutput(file)
 	defer file.Close()
 
 	fmt.Printf("Starting log generator - writing to: %s\n", filename)
 
-	p := tea.NewProgram(initialModel(file))
+	p := tea.NewProgram(initialModel(file), tea.WithAltScreen())
 	if _, err := p.Run(); err != nil {
 		fmt.Printf("Error: %v", err)
 		os.Exit(1)
