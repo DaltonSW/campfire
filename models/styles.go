@@ -23,19 +23,19 @@ var (
 var (
 	titleStyle = lipgloss.NewStyle().
 			Foreground(titleColor).
-			AlignHorizontal(lipgloss.Center).
-			Bold(true).
-			Underline(true)
+		// AlignHorizontal(lipgloss.Center).
+		Bold(true).
+		Underline(true)
 
 	fileNameStyle = lipgloss.NewStyle().
 			Foreground(filenameColor).
-			AlignHorizontal(lipgloss.Center).
-			Italic(true)
+		// AlignHorizontal(lipgloss.Center).
+		Italic(true)
 
 	statsStyle = lipgloss.NewStyle().
 			Foreground(statsColor).
-			AlignHorizontal(lipgloss.Right).
-			Italic(true)
+		// AlignHorizontal(lipgloss.Right).
+		Italic(true)
 
 	viewportStyle = lipgloss.NewStyle().
 			Align(lipgloss.Left, lipgloss.Top).
@@ -63,7 +63,7 @@ var (
 	appStyle = lipgloss.NewStyle().Padding(2)
 )
 
-func StyleMessage(line string, lineNum int, filters VisualFilters) string {
+func StyleMessage(line string, lineNum int, filters Filters) string {
 	var styleMsg string
 	switch {
 	case strings.Contains(line, "INFO"):

@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
-	"math"
 	"strings"
 
 	"os"
@@ -14,8 +13,6 @@ import (
 	"github.com/charmbracelet/bubbles/v2/viewport"
 	tea "github.com/charmbracelet/bubbletea/v2"
 	"github.com/charmbracelet/lipgloss/v2"
-
-	"github.com/dustin/go-humanize"
 )
 
 const tickRate = time.Millisecond * 200
@@ -30,11 +27,13 @@ type fileExistsMsg struct {
 }
 type fileErrorMsg error
 
-type VisualFilters struct {
+type Filters struct {
 	ShowInfo  bool
 	ShowWarn  bool
 	ShowError bool
 	ShowDebug bool
+	ShowFatal bool
+	ShowOther bool
 }
 
 // NewModel actually creates the main campfire model
@@ -43,11 +42,13 @@ func NewModel(filename string) *model {
 	m := model{
 		filename: filename,
 		help:     help.New(),
-		filters: VisualFilters{
+		filters: Filters{
 			ShowInfo:  true,
 			ShowWarn:  true,
 			ShowError: true,
 			ShowDebug: true,
+			ShowFatal: true,
+			ShowOther: false,
 		},
 	}
 
@@ -63,7 +64,7 @@ type model struct {
 	ready         bool
 	help          help.Model
 
-	filters VisualFilters
+	filters Filters
 
 	fileExists   bool
 	prevFileInfo fs.FileInfo
@@ -97,6 +98,10 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.filters.ShowError = !m.filters.ShowError
 		case "4":
 			m.filters.ShowDebug = !m.filters.ShowDebug
+		case "5":
+			m.filters.ShowFatal = !m.filters.ShowFatal
+		case "6":
+			m.filters.ShowOther = !m.filters.ShowOther
 		}
 
 	case tea.WindowSizeMsg:
@@ -169,69 +174,6 @@ func (m model) View() string {
 	centerContent = m.viewport.View()
 
 	return appStyle.Render(fmt.Sprintf("%s\n%s\n%s", m.Header(), viewportStyle.Render(centerContent), m.Footer()))
-}
-
-// Header gets the above-viewport content. Title and file stats
-func (m model) Header() string {
-	cWidth := len(m.filename)
-	newLWidth := int(math.Floor(float64((m.width - cWidth) / 2)))
-
-	cContent := titleStyle.AlignHorizontal(lipgloss.Right).Width(newLWidth + cWidth).Render("Campfire")
-
-	rContent := ""
-	if m.fileExists {
-		filesize := humanize.Bytes(uint64(m.prevFileInfo.Size()))
-
-		rContent = fmt.Sprintf(
-			"%v %v",
-			fileNameStyle.Render(m.filename),
-			fmt.Sprintf("(Size: %v)", filesize),
-		)
-	} else {
-		rContent = "File not found..."
-	}
-	rContent = statsStyle.Width(m.width - cWidth - newLWidth).Render(rContent)
-
-	return cContent + rContent
-}
-
-var visibleIcon = lipgloss.NewStyle().Foreground(lipgloss.Color("#a6da95")).Render("")
-var invisibleIcon = lipgloss.NewStyle().Foreground(lipgloss.Color("#ed8796")).Render("")
-
-// Footer prints the helptext and contact/repo info
-func (m model) Footer() string {
-
-	if !m.ready || m.width == 0 {
-		return ""
-	}
-
-	var lContent, cContent, rContent []string
-
-	// TODO: Help
-
-	infoIcon := ternary(m.filters.ShowInfo, visibleIcon, invisibleIcon)
-	warnIcon := ternary(m.filters.ShowWarn, visibleIcon, invisibleIcon)
-	errorIcon := ternary(m.filters.ShowError, visibleIcon, invisibleIcon)
-	debugIcon := ternary(m.filters.ShowDebug, visibleIcon, invisibleIcon)
-
-	lContent = append(lContent, fmt.Sprintf("[1] INFO (%v) | [3] ERROR (%v)", infoIcon, errorIcon))
-	lContent = append(lContent, fmt.Sprintf("[2] WARN (%v) | [4] DEBUG (%v)", warnIcon, debugIcon))
-	lContent = append(lContent, "Text Filter: <not yet implemented>")
-
-	cContent = append(cContent, "    [^+u] 󱦒 pgup | [k/] up | [j/] down | [^+d] 󱦒 pgdn")
-	cContent = append(cContent, "[1-4] filter log level | [ctrl+/] text filter")
-	cContent = append(cContent, "[q/ctrl+c] quit")
-
-	rContent = append(rContent, "Issues? Suggestions?")
-	rContent = append(rContent, "Lemme know! feedback@dalton.dog")
-	rContent = append(rContent, "https://github.com/daltonsw/campfire")
-
-	var outContent string
-	for i := range cContent {
-		outContent += align(m.width, lContent[i], cContent[i], rContent[i]) + "\n"
-	}
-
-	return outContent
 }
 
 // ~~ Commands ~~
