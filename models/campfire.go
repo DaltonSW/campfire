@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"math"
+	"strings"
 
 	"os"
 	"time"
@@ -91,7 +93,6 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			)
 
 			m.viewport.SoftWrap = true
-			m.viewport.LeftGutterFunc = GutterFunc
 
 			m.fileExists = false
 			m.ready = true
@@ -101,14 +102,15 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 	case fileExistsMsg:
-		m.viewport.LeftGutterFunc = GutterFunc
 		m.prevFileInfo = msg.info
 		m.fileExists = true
-		m.viewport.SetContent(string(msg.content))
-		m.viewport.GotoTop()
+		var outContent []string
+		for message := range strings.SplitSeq(string(msg.content), "\n") {
+			outContent = append(outContent, StyleMessage(message))
+		}
+		m.viewport.SetContentLines(outContent)
 
 	case fileGoneMsg:
-		m.viewport.LeftGutterFunc = nil
 		m.fileExists = false
 		m.viewport.SetContent("")
 
@@ -142,14 +144,30 @@ func (m model) View() string {
 
 // Header gets the above-viewport content. Title and file stats
 func (m model) Header() string {
-	outStr := fmt.Sprintf("Current File: %v\n", fileNameStyle.Render(m.filename))
-	if m.fileExists {
-		outStr += fmt.Sprintf("File Size: %v ~~ Last Modified: %v", humanize.Bytes(uint64(m.prevFileInfo.Size())), m.prevFileInfo.ModTime().Format("03:04:05.0000 PM"))
-	} else {
-		outStr += "File being monitored doesn't seem to exist..."
-	}
-	return lipgloss.PlaceHorizontal(m.width, lipgloss.Center, outStr)
+	cWidth := len(m.filename)
+	newLWidth := int(math.Floor(float64((m.width - cWidth) / 2)))
 
+	cContent := titleStyle.AlignHorizontal(lipgloss.Right).Width(newLWidth + cWidth).Render("Campfire")
+
+	rContent := ""
+	if m.fileExists {
+		filesize := humanize.Bytes(uint64(m.prevFileInfo.Size()))
+
+		rContent = fmt.Sprintf(
+			"%v %v",
+			fileNameStyle.Render(m.filename),
+			fmt.Sprintf("(Size: %v)", filesize),
+		)
+	} else {
+		rContent = "File not found..."
+	}
+	rContent = statsStyle.Width(m.width - cWidth - newLWidth).Render(rContent)
+
+	// cContent := fileNameStyle.Render(m.filename)
+	// cContent = lContent + cContent[lWidth:]
+	// cContent = cContent[0:lipgloss.Width(cContent)-rWidth-1] + rContent
+
+	return cContent + rContent
 }
 
 // Footer prints the helptext and contact/repo info
