@@ -24,8 +24,8 @@ type model struct {
 type tickMsg time.Time
 
 func tickCmd() tea.Cmd {
-	// Random interval between 1-3 seconds
-	interval := time.Millisecond * time.Duration(250+rand.Intn(1000))
+	// Between 0.2s and 1s
+	interval := time.Millisecond * time.Duration(200+rand.Intn(800))
 	return tea.Tick(interval, func(t time.Time) tea.Msg {
 		return tickMsg(t)
 	})

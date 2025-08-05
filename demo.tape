@@ -28,8 +28,6 @@ Show
 
 # Create a horizontal split
 Type "tmux split-window -h -d -p 70 -- bash" Enter
-Sleep 1
-
 Ctrl+L
 Sleep 0.5
 
