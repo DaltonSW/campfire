@@ -163,7 +163,6 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		cmds = append(cmds, updateViewport(m.content, m.filters))
 
-	// BUG: Something is funky here... Resizing does seemingly inconsistent stuff
 	case tea.WindowSizeMsg:
 		headerHeight := lipgloss.Height(m.Header())
 		footerHeight := lipgloss.Height(m.Footer())
