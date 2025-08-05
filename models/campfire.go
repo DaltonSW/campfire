@@ -15,7 +15,7 @@ import (
 	"github.com/charmbracelet/lipgloss/v2"
 )
 
-const tickRate = time.Millisecond * 200
+const tickRate = time.Millisecond * 1000
 
 // Messages
 
@@ -26,15 +26,7 @@ type fileExistsMsg struct {
 	content []byte
 }
 type fileErrorMsg error
-
-type Filters struct {
-	ShowInfo  bool
-	ShowWarn  bool
-	ShowError bool
-	ShowDebug bool
-	ShowFatal bool
-	ShowOther bool
-}
+type viewportUpdateMsg []string
 
 // NewModel actually creates the main campfire model
 func NewModel(filename string) *model {
@@ -58,7 +50,7 @@ func NewModel(filename string) *model {
 // model is the BubbleTea model for campfire
 type model struct {
 	filename      string
-	content       string
+	content       []LogMessage
 	viewport      viewport.Model
 	width, height int
 	ready         bool
@@ -72,7 +64,7 @@ type model struct {
 
 // Init kicks off the ticking
 func (m model) Init() tea.Cmd {
-	return tickCmd()
+	return tea.Batch(tickCmd(), checkFile(m.filename))
 }
 
 // Update processes new messages for the model
@@ -104,6 +96,8 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.filters.ShowOther = !m.filters.ShowOther
 		}
 
+		cmds = append(cmds, updateViewport(m.content, m.filters))
+
 	case tea.WindowSizeMsg:
 		headerHeight := lipgloss.Height(m.Header())
 		footerHeight := lipgloss.Height(m.Footer())
@@ -128,21 +122,20 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.fileExists = false
 			m.ready = true
 		} else {
-			m.viewport.SetWidth(msg.Width)
-			m.viewport.SetHeight(msg.Height - verticalMarginHeight)
+			m.viewport.SetWidth(msg.Width - viewportStyle.GetHorizontalBorderSize())
+			m.viewport.SetHeight(m.height - verticalMarginHeight - viewportStyle.GetVerticalBorderSize())
 		}
 
 	case fileExistsMsg:
 		m.prevFileInfo = msg.info
 		m.fileExists = true
-		var outContent []string
+		m.content = make([]LogMessage, 0)
 		for i, message := range strings.Split(string(msg.content), "\n") {
-			styled := StyleMessage(message, i, m.filters)
-			if styled != "" {
-				outContent = append(outContent, styled)
-			}
+			logMsg := NewLogMessage(i, message)
+			m.content = append(m.content, logMsg)
 		}
-		m.viewport.SetContentLines(outContent)
+
+		cmds = append(cmds, updateViewport(m.content, m.filters))
 
 	case fileGoneMsg:
 		m.fileExists = false
@@ -151,6 +144,9 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case fileErrorMsg:
 		content := "❌ Error reading file: " + msg.Error()
 		m.viewport.SetContent(content)
+
+	case viewportUpdateMsg:
+		m.viewport.SetContentLines(msg)
 
 	case tickMsg:
 		cmds = append(cmds, checkFile(m.filename))
@@ -216,5 +212,19 @@ func checkFile(name string) tea.Cmd {
 		}
 
 		return fileExistsMsg{content: content, info: info}
+	}
+}
+
+func updateViewport(content []LogMessage, filters Filters) tea.Cmd {
+	return func() tea.Msg {
+		var outContent []string
+
+		for _, msg := range content {
+			if filters.IncludeMessage(msg) {
+				outContent = append(outContent, msg.String())
+			}
+		}
+
+		return viewportUpdateMsg(outContent)
 	}
 }
