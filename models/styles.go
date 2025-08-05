@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/charmbracelet/bubbles/v2/viewport"
 	"github.com/charmbracelet/lipgloss/v2"
 	"github.com/charmbracelet/lipgloss/v2/compat"
 )
@@ -60,29 +59,44 @@ var (
 
 	debugStyle = lipgloss.NewStyle().
 			Foreground(debugColor)
+
+	appStyle = lipgloss.NewStyle().Padding(2)
 )
 
-func GutterFunc(info viewport.GutterContext) string {
-	if info.Soft {
-		return "     │ "
-	}
-	if info.Index >= info.TotalLines {
-		return "   ~ │ "
-	}
-	return fmt.Sprintf("%4d │ ", info.Index+1)
-}
-
-func StyleMessage(line string) string {
+func StyleMessage(line string, lineNum int, filters VisualFilters) string {
+	var styleMsg string
 	switch {
 	case strings.Contains(line, "INFO"):
-		return infoStyle.Render(line)
+		if !filters.ShowInfo {
+			return ""
+		} else {
+			styleMsg = infoStyle.Render(line)
+		}
+
 	case strings.Contains(line, "WARN"):
-		return warnStyle.Render(line)
+		if !filters.ShowWarn {
+			return ""
+		} else {
+			styleMsg = warnStyle.Render(line)
+		}
+
 	case strings.Contains(line, "ERRO"):
-		return errorStyle.Render(line)
+		if !filters.ShowError {
+			return ""
+		} else {
+			styleMsg = errorStyle.Render(line)
+		}
+
 	case strings.Contains(line, "DEBU"):
-		return debugStyle.Render(line)
+		if !filters.ShowDebug {
+			return ""
+		} else {
+			styleMsg = debugStyle.Render(line)
+		}
+
 	default:
-		return line
+		styleMsg = line
 	}
+
+	return fmt.Sprintf("%4d. %s", lineNum+1, styleMsg)
 }

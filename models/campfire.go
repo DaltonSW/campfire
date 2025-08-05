@@ -14,12 +14,11 @@ import (
 	"github.com/charmbracelet/bubbles/v2/viewport"
 	tea "github.com/charmbracelet/bubbletea/v2"
 	"github.com/charmbracelet/lipgloss/v2"
-	"github.com/charmbracelet/log"
 
 	"github.com/dustin/go-humanize"
 )
 
-const tickRate = time.Millisecond * 500
+const tickRate = time.Millisecond * 200
 
 // Messages
 
@@ -31,15 +30,26 @@ type fileExistsMsg struct {
 }
 type fileErrorMsg error
 
+type VisualFilters struct {
+	ShowInfo  bool
+	ShowWarn  bool
+	ShowError bool
+	ShowDebug bool
+}
+
 // NewModel actually creates the main campfire model
 func NewModel(filename string) *model {
 	// Viewport is initialized in after window size message
 	m := model{
 		filename: filename,
 		help:     help.New(),
+		filters: VisualFilters{
+			ShowInfo:  true,
+			ShowWarn:  true,
+			ShowError: true,
+			ShowDebug: true,
+		},
 	}
-
-	log.Info("NewModel function")
 
 	return &m
 }
@@ -52,6 +62,8 @@ type model struct {
 	width, height int
 	ready         bool
 	help          help.Model
+
+	filters VisualFilters
 
 	fileExists   bool
 	prevFileInfo fs.FileInfo
@@ -69,8 +81,22 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	switch msg := msg.(type) {
 	case tea.KeyPressMsg:
-		if k := msg.String(); k == "ctrl+c" || k == "q" || k == "esc" {
+		switch msg.String() {
+		case "ctrl+c":
 			return m, tea.Quit
+		case "q":
+			return m, tea.Quit
+		case "esc":
+			return m, tea.Quit
+
+		case "1":
+			m.filters.ShowInfo = !m.filters.ShowInfo
+		case "2":
+			m.filters.ShowWarn = !m.filters.ShowWarn
+		case "3":
+			m.filters.ShowError = !m.filters.ShowError
+		case "4":
+			m.filters.ShowDebug = !m.filters.ShowDebug
 		}
 
 	case tea.WindowSizeMsg:
@@ -78,12 +104,12 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		footerHeight := lipgloss.Height(m.Footer())
 		verticalMarginHeight := headerHeight + footerHeight
 
-		m.width = msg.Width
-		m.height = msg.Height
+		m.width = msg.Width - appStyle.GetHorizontalFrameSize()
+		m.height = msg.Height - appStyle.GetVerticalFrameSize()
 
-		m.help.Width = msg.Width
+		m.help.Width = m.width
 
-		viewportStyle = viewportStyle.Width(msg.Width).Height(m.height - verticalMarginHeight)
+		viewportStyle = viewportStyle.Width(m.width).Height(m.height - verticalMarginHeight)
 		footerStyle.Width(m.width)
 
 		if !m.ready {
@@ -105,8 +131,11 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.prevFileInfo = msg.info
 		m.fileExists = true
 		var outContent []string
-		for message := range strings.SplitSeq(string(msg.content), "\n") {
-			outContent = append(outContent, StyleMessage(message))
+		for i, message := range strings.Split(string(msg.content), "\n") {
+			styled := StyleMessage(message, i, m.filters)
+			if styled != "" {
+				outContent = append(outContent, styled)
+			}
 		}
 		m.viewport.SetContentLines(outContent)
 
@@ -139,7 +168,7 @@ func (m model) View() string {
 
 	centerContent = m.viewport.View()
 
-	return fmt.Sprintf("%s\n%s\n%s", m.Header(), viewportStyle.Render(centerContent), m.Footer())
+	return appStyle.Render(fmt.Sprintf("%s\n%s\n%s", m.Header(), viewportStyle.Render(centerContent), m.Footer()))
 }
 
 // Header gets the above-viewport content. Title and file stats
@@ -163,23 +192,51 @@ func (m model) Header() string {
 	}
 	rContent = statsStyle.Width(m.width - cWidth - newLWidth).Render(rContent)
 
-	// cContent := fileNameStyle.Render(m.filename)
-	// cContent = lContent + cContent[lWidth:]
-	// cContent = cContent[0:lipgloss.Width(cContent)-rWidth-1] + rContent
-
 	return cContent + rContent
 }
 
+var visibleIcon = lipgloss.NewStyle().Foreground(lipgloss.Color("#a6da95")).Render("")
+var invisibleIcon = lipgloss.NewStyle().Foreground(lipgloss.Color("#ed8796")).Render("")
+
 // Footer prints the helptext and contact/repo info
 func (m model) Footer() string {
+
+	if !m.ready || m.width == 0 {
+		return ""
+	}
+
+	var lContent, cContent, rContent []string
+
 	// TODO: Help
 
-	// outStr := footerStyle.Render(m.help.View(viewport.DefaultKeyMap()) + "\n")
-	outStr := footerStyle.Render("Issues? Suggestions? Discussions? Lemme know -- https://github.com/daltonsw/campfire")
-	return lipgloss.PlaceHorizontal(m.width, lipgloss.Center, outStr)
+	infoIcon := ternary(m.filters.ShowInfo, visibleIcon, invisibleIcon)
+	warnIcon := ternary(m.filters.ShowWarn, visibleIcon, invisibleIcon)
+	errorIcon := ternary(m.filters.ShowError, visibleIcon, invisibleIcon)
+	debugIcon := ternary(m.filters.ShowDebug, visibleIcon, invisibleIcon)
+
+	lContent = append(lContent, fmt.Sprintf("[1] INFO (%v) | [3] ERROR (%v)", infoIcon, errorIcon))
+	lContent = append(lContent, fmt.Sprintf("[2] WARN (%v) | [4] DEBUG (%v)", warnIcon, debugIcon))
+	lContent = append(lContent, "Text Filter: <not yet implemented>")
+
+	cContent = append(cContent, "    [^+u] 󱦒 pgup | [k/] up | [j/] down | [^+d] 󱦒 pgdn")
+	cContent = append(cContent, "[1-4] filter log level | [ctrl+/] text filter")
+	cContent = append(cContent, "[q/ctrl+c] quit")
+
+	rContent = append(rContent, "Issues? Suggestions?")
+	rContent = append(rContent, "Lemme know! feedback@dalton.dog")
+	rContent = append(rContent, "https://github.com/daltonsw/campfire")
+
+	var outContent string
+	for i := range cContent {
+		outContent += align(m.width, lContent[i], cContent[i], rContent[i]) + "\n"
+	}
+
+	return outContent
 }
 
-// Commands
+// ~~ Commands ~~
+
+// tickCmd will send the same tick on a constant cadence
 func tickCmd() tea.Cmd {
 	return tea.Tick(tickRate, func(t time.Time) tea.Msg {
 		return tickMsg(t)

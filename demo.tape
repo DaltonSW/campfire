@@ -5,6 +5,8 @@ Require campfire
 
 Set Width 1920
 Set Height 1080
+Set FontFamily "MartianMono NFM"
+Set FontSize 14
 
 Hide
   # Start new tmux session with default configuration
