@@ -5,6 +5,7 @@ import (
 	"strings"
 )
 
+// LogLevel represents typical log output levels
 type LogLevel int
 
 const (
@@ -35,6 +36,8 @@ func (l LogLevel) String() string {
 	return ""
 }
 
+// LogMessage is meant to represent a single logical log message
+// Typically denoted by an all-caps indicator near the start, such as INFO or WARN
 type LogMessage struct {
 	index   int
 	level   LogLevel

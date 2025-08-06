@@ -30,8 +30,8 @@ func (m model) Header() string {
 	return align(m.width, lContent, cContent, rContent)
 }
 
-var visibleIcon = lipgloss.NewStyle().Foreground(lipgloss.Color("#a6da95")).Render("")
-var invisibleIcon = lipgloss.NewStyle().Foreground(lipgloss.Color("#ed8796")).Render("")
+var visibleIcon = lipgloss.NewStyle().Foreground(lipgloss.Color("#a6da95")).Render("✔")
+var invisibleIcon = lipgloss.NewStyle().Foreground(lipgloss.Color("#ed8796")).Render("✘")
 
 // Footer prints the helptext and contact/repo info
 func (m model) Footer() string {

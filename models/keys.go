@@ -28,8 +28,6 @@ type NavKeymap struct {
 
 	GoToTop key.Binding
 	GoToEnd key.Binding
-
-	Quit key.Binding
 }
 
 func (f NavKeymap) String() []string {
@@ -66,7 +64,7 @@ func GetNavKeymap() NavKeymap {
 	)
 
 	m.PageDn = key.NewBinding(
-		key.WithKeys("pgdn"),
+		key.WithKeys("pgdown"),
 		key.WithHelp("pgdn", "pgdn"),
 	)
 
@@ -90,12 +88,6 @@ func GetNavKeymap() NavKeymap {
 		key.WithHelp("G", "end"),
 	)
 
-	// Control
-	m.Quit = key.NewBinding(
-		key.WithKeys("q", "ctrl+c"),
-		key.WithHelp("q/^+c", "quit"),
-	)
-
 	return m
 }
 
@@ -105,6 +97,13 @@ type FilterKeymap struct {
 
 	NoFocusClearFilter key.Binding
 	FocusedClearFilter key.Binding
+
+	ToggleInfo  key.Binding
+	ToggleWarn  key.Binding
+	ToggleError key.Binding
+	ToggleDebug key.Binding
+	ToggleFatal key.Binding
+	ToggleOther key.Binding
 
 	Quit key.Binding
 }
@@ -144,10 +143,17 @@ func GetFilterKeymap() FilterKeymap {
 		key.WithHelp("enter", "accept"),
 	)
 
+	m.ToggleInfo = key.NewBinding(key.WithKeys("1"))
+	m.ToggleWarn = key.NewBinding(key.WithKeys("2"))
+	m.ToggleError = key.NewBinding(key.WithKeys("3"))
+	m.ToggleDebug = key.NewBinding(key.WithKeys("4"))
+	m.ToggleFatal = key.NewBinding(key.WithKeys("5"))
+	m.ToggleOther = key.NewBinding(key.WithKeys("6"))
+
 	// Control
 	m.Quit = key.NewBinding(
-		key.WithKeys("q", "ctrl+c"),
-		key.WithHelp("q/^+c", "quit"),
+		key.WithKeys("ctrl+c"),
+		key.WithHelp("ctrl+c", "quit"),
 	)
 
 	return m

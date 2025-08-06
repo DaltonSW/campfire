@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/charmbracelet/bubbles/v2/help"
+	"github.com/charmbracelet/bubbles/v2/key"
 	"github.com/charmbracelet/bubbles/v2/textinput"
 	"github.com/charmbracelet/bubbles/v2/viewport"
 	tea "github.com/charmbracelet/bubbletea/v2"
@@ -86,20 +87,20 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 	var cmds []tea.Cmd
 
-	// TODO: Turn these into key.Matches() calls instead of string checks
 	switch msg := msg.(type) {
 	case tea.KeyPressMsg:
+
 		switch m.textActive {
 		case true:
-			switch msg.String() {
-			case "ctrl+c":
+			switch {
+			case key.Matches(msg, m.filterKeys.Quit):
 				return m, tea.Quit
-			case "esc":
+			case key.Matches(msg, m.filterKeys.FocusedClearFilter):
 				m.textActive = false
 				m.filters.FilterText = ""
 				m.textInput.SetValue("")
 				m.textInput.Blur()
-			case "enter":
+			case key.Matches(msg, m.filterKeys.SaveFilter):
 				m.textActive = false
 				m.filters.FilterText = m.textInput.Value()
 				m.textInput.Blur()
@@ -110,36 +111,53 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 
 		case false:
-			switch msg.String() {
-			case "ctrl+c":
-				return m, tea.Quit
-			case "q":
-				return m, tea.Quit
-			case "esc":
+			switch {
+			case key.Matches(msg, m.filterKeys.Quit):
 				return m, tea.Quit
 
 			// Level filter toggles
-			case "1":
+			case key.Matches(msg, m.filterKeys.ToggleInfo):
 				m.filters.ShowInfo = !m.filters.ShowInfo
-			case "2":
+			case key.Matches(msg, m.filterKeys.ToggleWarn):
 				m.filters.ShowWarn = !m.filters.ShowWarn
-			case "3":
+			case key.Matches(msg, m.filterKeys.ToggleError):
 				m.filters.ShowError = !m.filters.ShowError
-			case "4":
+			case key.Matches(msg, m.filterKeys.ToggleDebug):
 				m.filters.ShowDebug = !m.filters.ShowDebug
-			case "5":
+			case key.Matches(msg, m.filterKeys.ToggleFatal):
 				m.filters.ShowFatal = !m.filters.ShowFatal
-			case "6":
+			case key.Matches(msg, m.filterKeys.ToggleOther):
 				m.filters.ShowOther = !m.filters.ShowOther
 
 			// Keyword filtering
-			case "f":
+			case key.Matches(msg, m.filterKeys.FocusFilter):
 				m.textActive = true
 				m.textInput.Focus()
 
-			case "x":
+			case key.Matches(msg, m.filterKeys.NoFocusClearFilter):
 				m.textInput.SetValue("")
 				m.filters.FilterText = ""
+
+			// Viewport things
+			case key.Matches(msg, m.navKeys.LineUp):
+				m.viewport.LineUp(1)
+			case key.Matches(msg, m.navKeys.LineDn):
+				m.viewport.LineDown(1)
+
+			case key.Matches(msg, m.navKeys.PageUp):
+				m.viewport.ViewUp()
+			case key.Matches(msg, m.navKeys.PageDn):
+				m.viewport.ViewDown()
+
+			case key.Matches(msg, m.navKeys.HalfPgUp):
+				m.viewport.HalfViewUp()
+			case key.Matches(msg, m.navKeys.HalfPgDn):
+				m.viewport.HalfViewDown()
+
+			case key.Matches(msg, m.navKeys.GoToTop):
+				m.viewport.GotoTop()
+			case key.Matches(msg, m.navKeys.GoToEnd):
+				m.viewport.GotoBottom()
 			}
 
 		}
@@ -203,8 +221,8 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	// Handle keyboard and mouse events in the viewport
-	m.viewport, cmd = m.viewport.Update(msg)
-	cmds = append(cmds, cmd)
+	// m.viewport, cmd = m.viewport.Update(msg)
+	// cmds = append(cmds, cmd)
 
 	return m, tea.Batch(cmds...)
 }
