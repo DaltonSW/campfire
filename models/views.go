@@ -40,7 +40,7 @@ func (m model) Footer() string {
 		return ""
 	}
 
-	var lContent, rContent []string
+	var lContent, cContent, rContent []string
 
 	infoIcon := ternary(m.filters.ShowInfo, visibleIcon, invisibleIcon)
 	warnIcon := ternary(m.filters.ShowWarn, visibleIcon, invisibleIcon)
@@ -49,23 +49,24 @@ func (m model) Footer() string {
 	fatalIcon := ternary(m.filters.ShowFatal, visibleIcon, invisibleIcon)
 	otherIcon := ternary(m.filters.ShowOther, visibleIcon, invisibleIcon)
 
-	lContent = append(lContent, "Text Filter: <not yet implemented>")
-	lContent = append(lContent, fmt.Sprintf(
-		"[1] INFO (%v) | [3] ERROR (%v) | [5] FATAL (%v)",
+	lContent = append(lContent, m.textInput.View())
+	lContent = append(lContent, m.filterKeys.String(m.textActive))
+
+	cContent = append(cContent, fmt.Sprintf(
+		"[1] INFO %v | [3] ERROR %v | [5] FATAL %v",
 		infoIcon, errorIcon, fatalIcon,
 	))
-	lContent = append(lContent, fmt.Sprintf(
-		"[2] WARN (%v) | [4] DEBUG (%v) | [6] OTHER (%v)",
+	cContent = append(cContent, fmt.Sprintf(
+		"[2] WARN %v | [4] DEBUG %v | [6] OTHER %v",
 		warnIcon, debugIcon, otherIcon,
 	))
 
-	rContent = append(rContent, "[^+u] 󱦒 pgup | [k/] up | [j/] down | [^+d] 󱦒 pgdn")
-	rContent = append(rContent, "[1-6] log level | [ctrl+f] text filter | [q/ctrl+c] quit")
-	rContent = append(rContent, "")
+	rContent = m.navKeys.String()
 
 	var outContent string
+
 	for i := range lContent {
-		outContent += align(m.width, lContent[i], "", rContent[i]) + "\n"
+		outContent += align(m.width, lContent[i], cContent[i], rContent[i]) + "\n"
 	}
 
 	return outContent

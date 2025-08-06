@@ -9,18 +9,26 @@ import (
 )
 
 var (
+	// UI colors
 	titleColor    = compat.AdaptiveColor{Light: lipgloss.Color("#dd7878"), Dark: lipgloss.Color("#f2d5cf")}
 	filenameColor = compat.AdaptiveColor{Light: lipgloss.Color("#fe640b"), Dark: lipgloss.Color("#ef9f76")}
 	statsColor    = compat.AdaptiveColor{Light: lipgloss.Color("#7c7f93"), Dark: lipgloss.Color("#737994")}
 	footerColor   = compat.AdaptiveColor{Light: lipgloss.Color("#7c7f93"), Dark: lipgloss.Color("#737994")}
 
+	// LogLevel colors
 	infoColor  = compat.AdaptiveColor{Light: lipgloss.Color("#40a02b"), Dark: lipgloss.Color("#a6d189")}
 	warnColor  = compat.AdaptiveColor{Light: lipgloss.Color("#df8e1d"), Dark: lipgloss.Color("#e5c890")}
 	errorColor = compat.AdaptiveColor{Light: lipgloss.Color("#d20f39"), Dark: lipgloss.Color("#e78284")}
 	debugColor = compat.AdaptiveColor{Light: lipgloss.Color("#8839ef"), Dark: lipgloss.Color("#ca9ee6")}
+
+	// Helptext colors
+	helpKeyColor  = compat.AdaptiveColor{Light: lipgloss.Color("#8c8fa1"), Dark: lipgloss.Color("#7f849c")}
+	helpDescColor = compat.AdaptiveColor{Light: lipgloss.Color("#7c7f93"), Dark: lipgloss.Color("#9399b2")}
 )
 
 var (
+	appStyle = lipgloss.NewStyle().Padding(2)
+
 	titleStyle = lipgloss.NewStyle().
 			Foreground(titleColor).
 		// AlignHorizontal(lipgloss.Center).
@@ -60,7 +68,13 @@ var (
 	debugStyle = lipgloss.NewStyle().
 			Foreground(debugColor)
 
-	appStyle = lipgloss.NewStyle().Padding(2)
+	helpKeyStyle = lipgloss.NewStyle().
+			Foreground(helpKeyColor).
+			Italic(true)
+
+	helpDescStyle = lipgloss.NewStyle().
+			Foreground(helpDescColor).
+			Italic(true)
 )
 
 func StyleMessage(line string, lineNum int, filters Filters) string {

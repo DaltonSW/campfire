@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/charmbracelet/bubbles/v2/help"
+	"github.com/charmbracelet/bubbles/v2/textinput"
 	"github.com/charmbracelet/bubbles/v2/viewport"
 	tea "github.com/charmbracelet/bubbletea/v2"
 	"github.com/charmbracelet/lipgloss/v2"
@@ -31,9 +32,16 @@ type viewportUpdateMsg []string
 // NewModel actually creates the main campfire model
 func NewModel(filename string) *model {
 	// Viewport is initialized in after window size message
+
+	text := textinput.New()
+	text.Placeholder = "<text filter>"
+	text.Prompt = "Filter: "
+
 	m := model{
-		filename: filename,
-		help:     help.New(),
+		filename:   filename,
+		navKeys:    GetNavKeymap(),
+		filterKeys: GetFilterKeymap(),
+		textInput:  text,
 		filters: Filters{
 			ShowInfo:  true,
 			ShowWarn:  true,
@@ -54,7 +62,13 @@ type model struct {
 	viewport      viewport.Model
 	width, height int
 	ready         bool
-	help          help.Model
+
+	filterKeys FilterKeymap
+	navKeys    NavKeymap
+	help       help.Model
+
+	textInput  textinput.Model
+	textActive bool
 
 	filters Filters
 
@@ -72,32 +86,66 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 	var cmds []tea.Cmd
 
+	// TODO: Turn these into key.Matches() calls instead of string checks
 	switch msg := msg.(type) {
 	case tea.KeyPressMsg:
-		switch msg.String() {
-		case "ctrl+c":
-			return m, tea.Quit
-		case "q":
-			return m, tea.Quit
-		case "esc":
-			return m, tea.Quit
+		switch m.textActive {
+		case true:
+			switch msg.String() {
+			case "ctrl+c":
+				return m, tea.Quit
+			case "esc":
+				m.textActive = false
+				m.filters.FilterText = ""
+				m.textInput.SetValue("")
+				m.textInput.Blur()
+			case "enter":
+				m.textActive = false
+				m.filters.FilterText = m.textInput.Value()
+				m.textInput.Blur()
+			default:
+				m.textInput, cmd = m.textInput.Update(msg)
+				cmds = append(cmds, cmd)
+				m.filters.FilterText = m.textInput.Value()
+			}
 
-		case "1":
-			m.filters.ShowInfo = !m.filters.ShowInfo
-		case "2":
-			m.filters.ShowWarn = !m.filters.ShowWarn
-		case "3":
-			m.filters.ShowError = !m.filters.ShowError
-		case "4":
-			m.filters.ShowDebug = !m.filters.ShowDebug
-		case "5":
-			m.filters.ShowFatal = !m.filters.ShowFatal
-		case "6":
-			m.filters.ShowOther = !m.filters.ShowOther
+		case false:
+			switch msg.String() {
+			case "ctrl+c":
+				return m, tea.Quit
+			case "q":
+				return m, tea.Quit
+			case "esc":
+				return m, tea.Quit
+
+			// Level filter toggles
+			case "1":
+				m.filters.ShowInfo = !m.filters.ShowInfo
+			case "2":
+				m.filters.ShowWarn = !m.filters.ShowWarn
+			case "3":
+				m.filters.ShowError = !m.filters.ShowError
+			case "4":
+				m.filters.ShowDebug = !m.filters.ShowDebug
+			case "5":
+				m.filters.ShowFatal = !m.filters.ShowFatal
+			case "6":
+				m.filters.ShowOther = !m.filters.ShowOther
+
+			// Keyword filtering
+			case "f":
+				m.textActive = true
+				m.textInput.Focus()
+
+			case "x":
+				m.textInput.SetValue("")
+				m.filters.FilterText = ""
+			}
+
 		}
-
 		cmds = append(cmds, updateViewport(m.content, m.filters))
 
+	// BUG: Something is funky here... Resizing does seemingly inconsistent stuff
 	case tea.WindowSizeMsg:
 		headerHeight := lipgloss.Height(m.Header())
 		footerHeight := lipgloss.Height(m.Footer())
@@ -107,6 +155,7 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.height = msg.Height - appStyle.GetVerticalFrameSize()
 
 		m.help.Width = m.width
+		m.textInput.SetWidth(int(m.width / 2))
 
 		viewportStyle = viewportStyle.Width(m.width).Height(m.height - verticalMarginHeight)
 		footerStyle.Width(m.width)
