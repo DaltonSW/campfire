@@ -10,6 +10,6 @@ tasks:
   demo:
     cmds:
       - go install .
-      - vhs assets/realtime.tape
-      - vhs assets/monitoring.tape
-      - vhs assets/filtering.tape
+      - vhs ./demo/realtime.tape
+      - vhs ./demo/monitoring.tape
+      - vhs ./demo/filtering.tape
