@@ -52,10 +52,10 @@ Type "echo WARN Uh oh! Incoming... >> vhs.log" Enter
 Sleep 2
 Type "echo ERROR OH NO FILE GETTING DELETED >> vhs.log" Enter
 Sleep 2
-Type "rm vhs.log"
+Type "rm vhs.log" Enter
 Sleep 2
-Type "echo INFO Wait, campfire didn't crash? >> vhs.log" Enter
+Type "echo INFO Oh awesome! No crash! >> vhs.log" Enter
 Sleep 2
-Type "echo INFO Nope, continuous monitoring! >> vhs.log" Enter
+Type "echo INFO Nope! Continuous monitoring! >> vhs.log" Enter
 Sleep 5
 

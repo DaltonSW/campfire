@@ -1,6 +1,6 @@
 <div align="center"">
     <img src="./assets/banner.png" style="width: 700px;"/>
-    <h2>Cozy up to your logs 🪵</h2>
+    <h2>Cozy up to your logs 🔥🪵</h2>
 </div>
 
 <div align="center">
@@ -11,19 +11,23 @@ Make your log files helpful instead of scary and cumbersome.
 
 - Monitor files as they update in real time
 
-![realtime update example](./assets/realtime.gif)
+![realtime update example](./demo/realtime.gif)
 
 - Filter your files by log type or keyword, hiding things you don't care about
 
-![filtering example](./assets/filtering.gif)
+![filtering example](./demo/filtering.gif)
 
 - Continously monitor files by name, whether they exist or not
 
-![file example](./assets/monitoring.gif)
+![file example](./demo/monitoring.gif)
 
 - All of the above at once!
 
-![whole shebang example](./assets/everything.gif)
+<div align="center">
+    <h2>Usage ⚙️</h2>
+</div>
+
+- Just run `campfire [file]` with whatever file you want to monitor. That's it!
 
 <div align="center">
     <h2>Installation ⬇️</h2>
@@ -32,8 +36,14 @@ Make your log files helpful instead of scary and cumbersome.
 ### Github Releases 🐙
 
 - Go to the `Releases` tab of the repo [here](https://github.com/DaltonSW/campfire/releases)
-- Download the latest binary for your OS
-- Place it on your `$PATH` and ensure it is executable
+- Download the latest archive for your OS/architecture
+- Extract it and place the resulting binary on your `$PATH` and ensure it is executable
+```sh
+cd ~/Downloads # Assuming you downloaded it here
+tar -xvf campfire_[whatever].tar.gz # x: Extract; v: Verbose output; f: Specify filename
+chmod +x campfire # Make file executable
+mv campfire [somewhere on your $PATH] # Move the file to somewhere on your path for easy execution
+```
 
 ### Homebrew 🍺 
 

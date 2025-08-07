@@ -7,7 +7,7 @@ Set Width 1920
 Set Height 1080
 Set FontFamily "MartianMono NFM"
 Set FontSize 14
-Set TypingSpeed 0.5
+Set TypingSpeed 0.33
 
 Hide
   # Clear any existing files
@@ -22,7 +22,7 @@ Hide
   Ctrl+L
 Show
 
-Type@200ms "campfire vhs.log" Enter
+Type@70ms "campfire vhs.log" Enter
 Sleep 2
 
 Type "1"
@@ -41,7 +41,7 @@ Type "auth"
 Sleep 3
 Backspace 4
 Sleep 2
-Type "oogabooga"
+Type "booga"
 Sleep 3
 Backspace 9
 Sleep 3
