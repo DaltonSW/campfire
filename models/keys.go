@@ -1,22 +1,25 @@
 package models
 
 import (
-	"fmt"
-
 	"github.com/charmbracelet/bubbles/v2/key"
-	"github.com/charmbracelet/lipgloss/v2"
 )
 
-var helpSep = lipgloss.NewStyle().Foreground(helpKeyColor).Render("•")
-
-func StyleKey(key key.Binding) string {
-	return fmt.Sprintf(
-		"%s %s",
-		helpKeyStyle.Render("["+key.Help().Key+"]"),
-		helpDescStyle.Render(key.Help().Desc))
+func (k Keymap) ShortHelp() []key.Binding {
+	return []key.Binding{
+		k.Quit,
+		k.LineUp, k.LineDn,
+		k.HalfPgUp, k.HalfPgDn,
+		k.GoToTop, k.GoToEnd,
+		k.FocusFilter, k.NoFocusClearFilter,
+		k.SaveFilter, k.FocusedClearFilter,
+	}
 }
 
-type NavKeymap struct {
+func (k Keymap) FullHelp() [][]key.Binding {
+	return [][]key.Binding{k.ShortHelp()}
+}
+
+type Keymap struct {
 	LineUp key.Binding
 	LineDn key.Binding
 
@@ -28,24 +31,25 @@ type NavKeymap struct {
 
 	GoToTop key.Binding
 	GoToEnd key.Binding
+
+	FocusFilter key.Binding
+	SaveFilter  key.Binding
+
+	NoFocusClearFilter key.Binding
+	FocusedClearFilter key.Binding
+
+	ToggleInfo  key.Binding
+	ToggleWarn  key.Binding
+	ToggleError key.Binding
+	ToggleDebug key.Binding
+	ToggleFatal key.Binding
+	ToggleOther key.Binding
+
+	Quit key.Binding
 }
 
-func (f NavKeymap) String() []string {
-	var out []string
-	out = append(out, fmt.Sprintf("%v %v %v %v %v",
-		StyleKey(f.GoToTop), helpSep,
-		StyleKey(f.HalfPgUp), helpSep,
-		StyleKey(f.LineUp)))
-	out = append(out, fmt.Sprintf("%v %v %v %v %v",
-		StyleKey(f.GoToEnd), helpSep,
-		StyleKey(f.HalfPgDn), helpSep,
-		StyleKey(f.LineDn)))
-
-	return out
-}
-
-func GetNavKeymap() NavKeymap {
-	m := NavKeymap{}
+func GetKeymap() Keymap {
+	m := Keymap{}
 
 	// Navigation/Scrolling
 	m.LineUp = key.NewBinding(
@@ -88,40 +92,6 @@ func GetNavKeymap() NavKeymap {
 		key.WithHelp("G", "end"),
 	)
 
-	return m
-}
-
-type FilterKeymap struct {
-	FocusFilter key.Binding
-	SaveFilter  key.Binding
-
-	NoFocusClearFilter key.Binding
-	FocusedClearFilter key.Binding
-
-	ToggleInfo  key.Binding
-	ToggleWarn  key.Binding
-	ToggleError key.Binding
-	ToggleDebug key.Binding
-	ToggleFatal key.Binding
-	ToggleOther key.Binding
-
-	Quit key.Binding
-}
-
-func (f FilterKeymap) String(textFocused bool) string {
-	mainKeys := ""
-	if textFocused {
-		mainKeys = fmt.Sprintf("%v %v %v", StyleKey(f.SaveFilter), helpSep, StyleKey(f.FocusedClearFilter))
-	} else {
-		mainKeys = fmt.Sprintf("%v %v %v", StyleKey(f.FocusFilter), helpSep, StyleKey(f.NoFocusClearFilter))
-	}
-
-	return fmt.Sprintf("%v %v %v", StyleKey(f.Quit), helpSep, mainKeys)
-}
-
-func GetFilterKeymap() FilterKeymap {
-	m := FilterKeymap{}
-
 	// Filtering
 	m.FocusFilter = key.NewBinding(
 		key.WithKeys("f"),
@@ -137,11 +107,13 @@ func GetFilterKeymap() FilterKeymap {
 		key.WithKeys("esc"),
 		key.WithHelp("esc", "clear"),
 	)
+	m.FocusedClearFilter.SetEnabled(false)
 
 	m.SaveFilter = key.NewBinding(
 		key.WithKeys("enter"),
 		key.WithHelp("enter", "accept"),
 	)
+	m.SaveFilter.SetEnabled(false)
 
 	m.ToggleInfo = key.NewBinding(key.WithKeys("1"))
 	m.ToggleWarn = key.NewBinding(key.WithKeys("2"))

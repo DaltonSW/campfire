@@ -36,20 +36,20 @@ func NewModel(filename string) *model {
 
 	text := textinput.New()
 	text.Placeholder = "<text filter>"
-	text.Prompt = "Filter: "
+	text.Prompt = "Substring: "
 
 	m := model{
-		filename:   filename,
-		navKeys:    GetNavKeymap(),
-		filterKeys: GetFilterKeymap(),
-		textInput:  text,
+		filename:  filename,
+		keys:      GetKeymap(),
+		textInput: text,
+		help:      help.New(),
 		filters: Filters{
 			ShowInfo:  true,
 			ShowWarn:  true,
 			ShowError: true,
 			ShowDebug: true,
 			ShowFatal: true,
-			ShowOther: false,
+			ShowOther: true,
 		},
 	}
 
@@ -64,9 +64,9 @@ type model struct {
 	width, height int
 	ready         bool
 
-	filterKeys FilterKeymap
-	navKeys    NavKeymap
-	help       help.Model
+	keys Keymap
+
+	help help.Model
 
 	textInput  textinput.Model
 	textActive bool
@@ -93,17 +93,27 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch m.textActive {
 		case true:
 			switch {
-			case key.Matches(msg, m.filterKeys.Quit):
+			case key.Matches(msg, m.keys.Quit):
 				return m, tea.Quit
-			case key.Matches(msg, m.filterKeys.FocusedClearFilter):
+			case key.Matches(msg, m.keys.FocusedClearFilter):
 				m.textActive = false
 				m.filters.FilterText = ""
 				m.textInput.SetValue("")
 				m.textInput.Blur()
-			case key.Matches(msg, m.filterKeys.SaveFilter):
+
+				m.keys.FocusFilter.SetEnabled(true)
+				m.keys.NoFocusClearFilter.SetEnabled(true)
+				m.keys.FocusedClearFilter.SetEnabled(false)
+				m.keys.SaveFilter.SetEnabled(false)
+			case key.Matches(msg, m.keys.SaveFilter):
 				m.textActive = false
 				m.filters.FilterText = m.textInput.Value()
 				m.textInput.Blur()
+
+				m.keys.FocusFilter.SetEnabled(true)
+				m.keys.NoFocusClearFilter.SetEnabled(true)
+				m.keys.FocusedClearFilter.SetEnabled(false)
+				m.keys.SaveFilter.SetEnabled(false)
 			default:
 				m.textInput, cmd = m.textInput.Update(msg)
 				cmds = append(cmds, cmd)
@@ -112,51 +122,56 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		case false:
 			switch {
-			case key.Matches(msg, m.filterKeys.Quit):
+			case key.Matches(msg, m.keys.Quit):
 				return m, tea.Quit
 
 			// Level filter toggles
-			case key.Matches(msg, m.filterKeys.ToggleInfo):
+			case key.Matches(msg, m.keys.ToggleInfo):
 				m.filters.ShowInfo = !m.filters.ShowInfo
-			case key.Matches(msg, m.filterKeys.ToggleWarn):
+			case key.Matches(msg, m.keys.ToggleWarn):
 				m.filters.ShowWarn = !m.filters.ShowWarn
-			case key.Matches(msg, m.filterKeys.ToggleError):
+			case key.Matches(msg, m.keys.ToggleError):
 				m.filters.ShowError = !m.filters.ShowError
-			case key.Matches(msg, m.filterKeys.ToggleDebug):
+			case key.Matches(msg, m.keys.ToggleDebug):
 				m.filters.ShowDebug = !m.filters.ShowDebug
-			case key.Matches(msg, m.filterKeys.ToggleFatal):
+			case key.Matches(msg, m.keys.ToggleFatal):
 				m.filters.ShowFatal = !m.filters.ShowFatal
-			case key.Matches(msg, m.filterKeys.ToggleOther):
-				m.filters.ShowOther = !m.filters.ShowOther
+			// case key.Matches(msg, m.keys.ToggleOther):
+			// 	m.filters.ShowOther = !m.filters.ShowOther
 
 			// Keyword filtering
-			case key.Matches(msg, m.filterKeys.FocusFilter):
+			case key.Matches(msg, m.keys.FocusFilter):
 				m.textActive = true
 				m.textInput.Focus()
 
-			case key.Matches(msg, m.filterKeys.NoFocusClearFilter):
+				m.keys.FocusFilter.SetEnabled(false)
+				m.keys.NoFocusClearFilter.SetEnabled(false)
+				m.keys.FocusedClearFilter.SetEnabled(true)
+				m.keys.SaveFilter.SetEnabled(true)
+
+			case key.Matches(msg, m.keys.NoFocusClearFilter):
 				m.textInput.SetValue("")
 				m.filters.FilterText = ""
 
 			// Viewport things
-			case key.Matches(msg, m.navKeys.LineUp):
+			case key.Matches(msg, m.keys.LineUp):
 				m.viewport.LineUp(1)
-			case key.Matches(msg, m.navKeys.LineDn):
+			case key.Matches(msg, m.keys.LineDn):
 				m.viewport.LineDown(1)
 
-			case key.Matches(msg, m.navKeys.PageUp):
+			case key.Matches(msg, m.keys.PageUp):
 				m.viewport.ViewUp()
-			case key.Matches(msg, m.navKeys.PageDn):
+			case key.Matches(msg, m.keys.PageDn):
 				m.viewport.ViewDown()
 
-			case key.Matches(msg, m.navKeys.HalfPgUp):
+			case key.Matches(msg, m.keys.HalfPgUp):
 				m.viewport.HalfViewUp()
-			case key.Matches(msg, m.navKeys.HalfPgDn):
+			case key.Matches(msg, m.keys.HalfPgDn):
 				m.viewport.HalfViewDown()
 
-			case key.Matches(msg, m.navKeys.GoToTop):
+			case key.Matches(msg, m.keys.GoToTop):
 				m.viewport.GotoTop()
-			case key.Matches(msg, m.navKeys.GoToEnd):
+			case key.Matches(msg, m.keys.GoToEnd):
 				m.viewport.GotoBottom()
 			}
 
@@ -164,15 +179,16 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		cmds = append(cmds, updateViewport(m.content, m.filters))
 
 	case tea.WindowSizeMsg:
-		headerHeight := lipgloss.Height(m.Header())
-		footerHeight := lipgloss.Height(m.Footer())
-		verticalMarginHeight := headerHeight + footerHeight
 
 		m.width = msg.Width - appStyle.GetHorizontalFrameSize()
 		m.height = msg.Height - appStyle.GetVerticalFrameSize()
 
 		m.help.Width = m.width
-		m.textInput.SetWidth(int(m.width / 2))
+		m.textInput.SetWidth(m.width - lipgloss.Width(m.textInput.Prompt) - lipgloss.Width(LevelFilterString) - borderStyle.GetHorizontalBorderSize())
+
+		headerHeight := lipgloss.Height(m.Header())
+		footerHeight := lipgloss.Height(m.Footer())
+		verticalMarginHeight := headerHeight + footerHeight
 
 		viewportStyle = viewportStyle.Width(m.width).Height(m.height - verticalMarginHeight)
 		footerStyle.Width(m.width)
