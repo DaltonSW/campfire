@@ -163,7 +163,6 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		cmds = append(cmds, updateViewport(m.content, m.filters))
 
-	// BUG: Something is funky here... Resizing does seemingly inconsistent stuff
 	case tea.WindowSizeMsg:
 		headerHeight := lipgloss.Height(m.Header())
 		footerHeight := lipgloss.Height(m.Footer())
@@ -197,6 +196,7 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.prevFileInfo = msg.info
 		m.fileExists = true
 		m.content = make([]LogMessage, 0)
+		// TODO: Make this handle multiple messages that span multiple lines
 		for i, message := range strings.Split(string(msg.content), "\n") {
 			logMsg := NewLogMessage(i, message)
 			m.content = append(m.content, logMsg)

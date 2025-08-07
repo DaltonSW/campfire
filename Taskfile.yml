@@ -2,9 +2,6 @@
 
 version: '3'
 
-vars:
-  GREETING: Hello, World!
-
 tasks:
   default:
     cmds:
@@ -13,5 +10,6 @@ tasks:
   demo:
     cmds:
       - go install .
-      - vhs demo.tape
-      - xdg-open demo.gif
+      - vhs ./demo/realtime.tape
+      - vhs ./demo/monitoring.tape
+      - vhs ./demo/filtering.tape
