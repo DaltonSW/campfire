@@ -87,6 +87,33 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmds []tea.Cmd
 
 	switch msg := msg.(type) {
+	case tea.WindowSizeMsg:
+
+		m.width = msg.Width
+		m.height = msg.Height
+
+		m.help.Width = m.width
+		textWidth := m.width - lipgloss.Width(m.textInput.Prompt) - lipgloss.Width(LevelFilterString) - borderStyle.GetHorizontalBorderSize()
+		m.textInput.SetWidth(max(textWidth, 0))
+
+		headerHeight := lipgloss.Height(m.Header())
+		footerHeight := lipgloss.Height(m.Footer())
+		verticalMarginHeight := headerHeight + footerHeight
+
+		viewportStyle = viewportStyle.Width(m.width).Height(m.height - verticalMarginHeight)
+
+		if !m.ready {
+			m.viewport = viewport.New()
+
+			m.viewport.SoftWrap = true
+			m.fileExists = false
+			m.ready = true
+		}
+
+		m.viewport.SetWidth(m.width)
+		m.viewport.SetHeight(m.height - viewportStyle.GetVerticalBorderSize())
+		m.viewport.Style = viewportStyle
+
 	case tea.KeyPressMsg:
 
 		switch m.textActive {
@@ -122,6 +149,9 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case false:
 			switch {
 			case key.Matches(msg, m.keys.Quit):
+				return m, tea.Quit
+
+			case msg.String() == "q": // Let q be a sneaky quit key if text field inactive
 				return m, tea.Quit
 
 			// Level filter toggles
@@ -177,32 +207,9 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		cmds = append(cmds, updateViewport(m.content, m.filters))
 
-	case tea.WindowSizeMsg:
-
-		m.width = msg.Width
-		m.height = msg.Height
-
-		m.help.Width = m.width
-		textWidth := m.width - lipgloss.Width(m.textInput.Prompt) - lipgloss.Width(LevelFilterString) - borderStyle.GetHorizontalBorderSize()
-		m.textInput.SetWidth(max(textWidth, 0))
-
-		headerHeight := lipgloss.Height(m.Header())
-		footerHeight := lipgloss.Height(m.Footer())
-		verticalMarginHeight := headerHeight + footerHeight
-
-		viewportStyle = viewportStyle.Width(m.width).Height(m.height - verticalMarginHeight)
-
-		if !m.ready {
-			m.viewport = viewport.New()
-
-			m.viewport.SoftWrap = true
-			m.fileExists = false
-			m.ready = true
-		}
-
-		m.viewport.SetWidth(m.width)
-		m.viewport.SetHeight(m.height - viewportStyle.GetVerticalBorderSize())
-		m.viewport.Style = viewportStyle
+	case tea.MouseWheelMsg:
+		m.viewport, cmd = m.viewport.Update(msg)
+		cmds = append(cmds, cmd)
 
 	case fileExistsMsg:
 		m.prevFileInfo = msg.info
