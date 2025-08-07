@@ -3,8 +3,6 @@
     <h2>Cozy up to your logs 🪵</h2>
 </div>
 
-<a href="https://www.flaticon.com/free-icons/campfire" title="campfire icons">Campfire icons created by Freepik - Flaticon</a>
-
 <div align="center">
     <h2>Why use <code>campfire</code> ❓</h2>
 </div>
@@ -55,10 +53,10 @@ go install go.dalton.dog/campfire@latest
 ```
 
 <div align="center">
-    <h2>Usage ⚙️</h2>
+    <h2>Credits 🗨️</h2>
 </div>
 
-Just install via one of the methods above and run `campfire <filename>` to get started!
+- [Campfire Icon - Created by Freepik/Flaticon](https://www.flaticon.com/free-icons/campfire)
 
 <div align="center">
     <h2>License ⚖️</h2>

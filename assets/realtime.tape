@@ -1,4 +1,4 @@
-Output demo.gif
+Output realtime.gif
 
 Require tmux
 Require campfire
@@ -46,5 +46,5 @@ Ctrl+B
 Type o
 Sleep 0.5
 
-Type "go run demo/demo.go vhs.log" Enter
+Type "go run ../demo/demo.go vhs.log" Enter
 Sleep 10
