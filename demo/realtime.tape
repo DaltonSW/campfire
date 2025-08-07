@@ -1,12 +1,7 @@
 Output realtime.gif
 
+Source shared.tape
 Require tmux
-Require campfire
-
-Set Width 1920
-Set Height 1080
-Set FontFamily "MartianMono NFM"
-Set FontSize 12
 
 Hide
   # Start new tmux session with default configuration

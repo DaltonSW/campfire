@@ -1,13 +1,6 @@
 Output filtering.gif
 
-Require tmux
-Require campfire
-
-Set Width 1920
-Set Height 1080
-Set FontFamily "MartianMono NFM"
-Set FontSize 14
-Set TypingSpeed 0.33
+Source shared.tape
 
 Hide
   # Clear any existing files
