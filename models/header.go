@@ -24,7 +24,7 @@ func (m model) Header() string {
 	}
 	rContent = statsStyle.Render(rContent)
 
-	lContent := statsStyle.Italic(true).Render("github.com/daltonsw/campfire")
+	lContent := statsStyle.Italic(true).Render("https://github.com/daltonsw/campfire")
 
 	return align(m.width, lContent, cContent, rContent)
 }

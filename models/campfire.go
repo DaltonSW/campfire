@@ -17,7 +17,7 @@ import (
 	"github.com/charmbracelet/lipgloss/v2"
 )
 
-const tickRate = time.Millisecond * 1000
+const tickRate = time.Millisecond * 750
 
 // Messages
 
@@ -65,7 +65,6 @@ type model struct {
 	ready         bool
 
 	keys Keymap
-
 	help help.Model
 
 	textInput  textinput.Model
@@ -180,33 +179,30 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case tea.WindowSizeMsg:
 
-		m.width = msg.Width - appStyle.GetHorizontalFrameSize()
-		m.height = msg.Height - appStyle.GetVerticalFrameSize()
+		m.width = msg.Width
+		m.height = msg.Height
 
 		m.help.Width = m.width
-		m.textInput.SetWidth(m.width - lipgloss.Width(m.textInput.Prompt) - lipgloss.Width(LevelFilterString) - borderStyle.GetHorizontalBorderSize())
+		textWidth := m.width - lipgloss.Width(m.textInput.Prompt) - lipgloss.Width(LevelFilterString) - borderStyle.GetHorizontalBorderSize()
+		m.textInput.SetWidth(max(textWidth, 0))
 
 		headerHeight := lipgloss.Height(m.Header())
 		footerHeight := lipgloss.Height(m.Footer())
 		verticalMarginHeight := headerHeight + footerHeight
 
 		viewportStyle = viewportStyle.Width(m.width).Height(m.height - verticalMarginHeight)
-		footerStyle.Width(m.width)
 
 		if !m.ready {
-			m.viewport = viewport.New(
-				viewport.WithWidth(msg.Width-viewportStyle.GetHorizontalBorderSize()),
-				viewport.WithHeight(m.height-verticalMarginHeight-viewportStyle.GetVerticalBorderSize()),
-			)
+			m.viewport = viewport.New()
 
 			m.viewport.SoftWrap = true
-
 			m.fileExists = false
 			m.ready = true
-		} else {
-			m.viewport.SetWidth(msg.Width - viewportStyle.GetHorizontalBorderSize())
-			m.viewport.SetHeight(m.height - verticalMarginHeight - viewportStyle.GetVerticalBorderSize())
 		}
+
+		m.viewport.SetWidth(m.width)
+		m.viewport.SetHeight(m.height - viewportStyle.GetVerticalBorderSize())
+		m.viewport.Style = viewportStyle
 
 	case fileExistsMsg:
 		m.prevFileInfo = msg.info
@@ -248,11 +244,8 @@ func (m model) View() string {
 	if !m.ready {
 		return "\n  Initializing..."
 	}
-	var centerContent string
 
-	centerContent = m.viewport.View()
-
-	return appStyle.Render(fmt.Sprintf("%s\n%s\n%s", m.Header(), viewportStyle.Render(centerContent), m.Footer()))
+	return fmt.Sprintf("%s\n%s\n%s", m.Header(), m.viewport.View(), m.Footer())
 }
 
 // ~~ Commands ~~

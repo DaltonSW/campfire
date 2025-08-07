@@ -16,15 +16,13 @@ var borderStyle = lipgloss.NewStyle().AlignHorizontal(lipgloss.Center).Border(li
 // Footer prints the helptext and contact/repo info
 func (m model) Footer() string {
 
-	if !m.ready || m.width == 0 {
-		return ""
-	}
-
 	infoIcon := ternary(m.filters.ShowInfo, visibleIcon, invisibleIcon)
 	warnIcon := ternary(m.filters.ShowWarn, visibleIcon, invisibleIcon)
 	errorIcon := ternary(m.filters.ShowError, visibleIcon, invisibleIcon)
 	debugIcon := ternary(m.filters.ShowDebug, visibleIcon, invisibleIcon)
 	fatalIcon := ternary(m.filters.ShowFatal, visibleIcon, invisibleIcon)
+
+	// sepChar := ternary(m.width < lipgloss.Width(LevelFilterString)+lipgloss.Width(m.textInput.Prompt)*2, "\n", " | ")
 
 	levelFilter := borderStyle.Render(
 		fmt.Sprintf(LevelFilterString,
@@ -33,5 +31,5 @@ func (m model) Footer() string {
 
 	// outContent = lipgloss.JoinHorizontal(lipgloss.Center, levelFilter, borderStyle.Render(m.textInput.View()))
 
-	return levelFilter + "\n" + m.help.ShortHelpView(m.keys.ShortHelp())
+	return levelFilter + "\n" + lipgloss.PlaceHorizontal(m.width, lipgloss.Center, m.help.ShortHelpView(m.keys.ShortHelp()))
 }

@@ -13,7 +13,6 @@ var (
 	titleColor    = compat.AdaptiveColor{Light: lipgloss.Color("#dd7878"), Dark: lipgloss.Color("#f2d5cf")}
 	filenameColor = compat.AdaptiveColor{Light: lipgloss.Color("#fe640b"), Dark: lipgloss.Color("#ef9f76")}
 	statsColor    = compat.AdaptiveColor{Light: lipgloss.Color("#7c7f93"), Dark: lipgloss.Color("#737994")}
-	footerColor   = compat.AdaptiveColor{Light: lipgloss.Color("#7c7f93"), Dark: lipgloss.Color("#737994")}
 
 	// LogLevel colors
 	infoColor  = compat.AdaptiveColor{Light: lipgloss.Color("#40a02b"), Dark: lipgloss.Color("#a6d189")}
@@ -23,8 +22,6 @@ var (
 )
 
 var (
-	appStyle = lipgloss.NewStyle().Padding(2)
-
 	titleStyle = lipgloss.NewStyle().
 			Foreground(titleColor).
 		// AlignHorizontal(lipgloss.Center).
@@ -44,11 +41,6 @@ var (
 	viewportStyle = lipgloss.NewStyle().
 			Align(lipgloss.Left, lipgloss.Top).
 			Border(lipgloss.RoundedBorder())
-
-	footerStyle = lipgloss.NewStyle().
-			Foreground(footerColor).
-			AlignHorizontal(lipgloss.Center).
-			Italic(true)
 
 	infoStyle = lipgloss.NewStyle().
 			Foreground(infoColor)
