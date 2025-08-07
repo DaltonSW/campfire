@@ -14,24 +14,25 @@ before:
     - go mod tidy
 
 builds:
-  - id: stylish
+  - id: campfire
     env:
       - CGO_ENABLED=0
     goos:
       - linux
       - darwin
 
-brews:
-  - name: stylish
-    directory: Formula
-    homepage: "https://dalton.dog/stylish"
+homebrew_casks:
+  - name: campfire
+    homepage: "https://dalton.dog/campfire"
+
     commit_author:
       name: DaltonDogBot
       email: "bot@dalton.dog"
+
     repository:
       owner: DaltonSW
       name: homebrew-tap
-      branch: stylish-update
+      branch: campfire-update
       token: "{{ .Env.GITHUB_TOKEN }}"
       pull_request:
         enabled: true
@@ -42,7 +43,7 @@ brews:
 
 
 archives:
-  - format: tar.gz
+  - formats: tar.gz
     # this name template makes the OS and Arch compatible with the results of `uname`.
     name_template: >-
       {{ .ProjectName }}_
