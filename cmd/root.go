@@ -13,7 +13,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const Version = "0.9.1"
+const Version = "0.9.2"
 
 var rootCmd = &cobra.Command{
 	Use:   "campfire <./path/to/file>",
