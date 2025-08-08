@@ -56,7 +56,7 @@ mv campfire [somewhere on your $PATH]   # Move the file to somewhere on your pat
 - Have `brew` installed ([brew.sh](https://brew.sh))
 - Run the following:
 ```sh
-brew install daltonsw/tap/campfire
+brew install --cask daltonsw/tap/campfire
 ```
 
 ### Go 🖥️ 
